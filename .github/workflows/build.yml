@@ -1,0 +1,46 @@
+name: Build CoC Timer APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract project archive
+        run: |
+          unzip -o CoCWidget-Android-Source.zip -d extracted
+          echo "Archive extracted"
+          find extracted -maxdepth 3 -type f | head -100
+
+      - name: Build APK
+        run: |
+          cd extracted
+          PROJECT_DIR=$(find . -name gradlew -type f -printf '%h\n' | head -1)
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: gradlew not found. The project archive may need a different build configuration."
+            exit 1
+          fi
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CoC-Timer-APK
+          path: extracted/**/*.apk
+          if-no-files-found: error
