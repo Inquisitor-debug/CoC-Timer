@@ -8,64 +8,40 @@ permissions:
 
 jobs:
   build:
-    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android SDK manually
+      - name: Install Android SDK
         shell: bash
         run: |
           set -e
-
           SDK="$RUNNER_TEMP/android-sdk"
           mkdir -p "$SDK/cmdline-tools"
 
-          curl -fL \
-            https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip \
-            -o "$RUNNER_TEMP/android-tools.zip"
-
-          mkdir -p "$RUNNER_TEMP/android-tools"
-          unzip -q "$RUNNER_TEMP/android-tools.zip" \
-            -d "$RUNNER_TEMP/android-tools"
-
-          mv "$RUNNER_TEMP/android-tools/cmdline-tools" \
-            "$SDK/cmdline-tools/latest"
+          curl -fL https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -o "$RUNNER_TEMP/tools.zip"
+          mkdir -p "$RUNNER_TEMP/tools"
+          unzip -q "$RUNNER_TEMP/tools.zip" -d "$RUNNER_TEMP/tools"
+          mv "$RUNNER_TEMP/tools/cmdline-tools" "$SDK/cmdline-tools/latest"
 
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "$SDK/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$SDK/platform-tools" >> "$GITHUB_PATH"
 
-          export ANDROID_HOME="$SDK"
-          export ANDROID_SDK_ROOT="$SDK"
-
-          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" \
-            --sdk_root="$SDK" --licenses || true
-
-          "$SDK/cmdline-tools/latest/bin/sdkmanager" \
-            --sdk_root="$SDK" \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Install Gradle
-        shell: bash
         run: |
-          set -e
-
-          curl -fL \
-            https://services.gradle.org/distributions/gradle-8.11.1-bin.zip \
-            -o "$RUNNER_TEMP/gradle.zip"
-
+          curl -fL https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -o "$RUNNER_TEMP/gradle.zip"
           unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
@@ -80,10 +56,10 @@ jobs:
         shell: bash
         run: |
           set -e
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          unset ANDROID_SDK_ROOT
+          export ANDROID_HOME="$RUNNER_TEMP/android-sdk"
           cd extracted/cocwidget
-          gradle assembleDebug --no-daemon
+          gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
