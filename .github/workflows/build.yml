@@ -26,8 +26,8 @@ jobs:
         run: |
           set -e
 
-          export ANDROID_HOME="$RUNNER_TEMP/android-sdk"
-          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          SDK="$RUNNER_TEMP/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
 
           curl -fL \
             https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip \
@@ -38,17 +38,21 @@ jobs:
             -d "$RUNNER_TEMP/android-tools"
 
           mv "$RUNNER_TEMP/android-tools/cmdline-tools" \
-            "$ANDROID_HOME/cmdline-tools/latest"
+            "$SDK/cmdline-tools/latest"
 
-          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "$SDK/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$SDK/platform-tools" >> "$GITHUB_PATH"
 
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            --sdk_root="$ANDROID_HOME" --licenses || true
+          export ANDROID_HOME="$SDK"
+          export ANDROID_SDK_ROOT="$SDK"
 
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            --sdk_root="$ANDROID_HOME" \
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" \
+            --sdk_root="$SDK" --licenses || true
+
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" \
+            --sdk_root="$SDK" \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
@@ -73,7 +77,11 @@ jobs:
           test -f extracted/cocwidget/app/build.gradle.kts
 
       - name: Build APK
+        shell: bash
         run: |
+          set -e
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           cd extracted/cocwidget
           gradle assembleDebug --no-daemon
 
